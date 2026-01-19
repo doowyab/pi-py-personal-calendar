@@ -60,7 +60,7 @@ headers = { 'Authorization': 'Bearer ' + access_token_id }
 calendarsResponse = requests.get('{base_url}me/calendars?$select=name'.format(base_url=MS_GRAPH_URL), headers=headers)
 bjCalendarId = calendarsResponse.json()['value'][1]['id']
 fyiCalendarId = calendarsResponse.json()['value'][2]['id']
-
+arsenalCalendarId = calendarsResponse.json()['value'][3]['id']
 today = datetime.now().replace(hour=0, minute=1, second=0, microsecond=0)
 monthLater = (today + timedelta(days=30))
 
@@ -70,8 +70,26 @@ bjEvents = bjEventsResponse.json()['value']
 calendarViewUrl = '{base_url}me/calendars/{calendar_id}/calendarView?$top=100&$select=subject,body,start,end,isAllDay,isCancelled,location&$orderby=start/dateTime&startdatetime={start_date_iso}&enddatetime={end_date_iso}'.format(base_url=MS_GRAPH_URL, calendar_id=fyiCalendarId, start_date_iso=today.isoformat(), end_date_iso=monthLater.isoformat())
 fyiEventsResponse = requests.get(calendarViewUrl, headers=headers)
 fyiEvents = fyiEventsResponse.json()['value']
+calendarViewUrl = '{base_url}me/calendars/{calendar_id}/calendarView?$top=100&$select=subject,body,start,end,isAllDay,isCancelled,location&$orderby=start/dateTime&startdatetime={start_date_iso}&enddatetime={end_date_iso}'.format(base_url=MS_GRAPH_URL, calendar_id=arsenalCalendarId, start_date_iso=today.isoformat(), end_date_iso=monthLater.isoformat())
+arsenalEventsResponse = requests.get(calendarViewUrl, headers=headers)
+arsenalEvents = arsenalEventsResponse.json()['value']
 
-bjEvents = np.concatenate((bjEvents, fyiEvents))
+arsenalEvents = [
+    event for event in arsenalEvents
+    if "tickets" not in event.get("subject", "").lower()
+]
+
+def shorten_subject(subject: str) -> str:
+    return (
+        subject
+        .replace("Arsenal", "")
+        .replace(" vs ", "")
+    )
+
+for event in arsenalEvents:
+    event["subject"] = shorten_subject(event.get("subject", ""))
+
+bjEvents = np.concatenate((bjEvents, fyiEvents, arsenalEvents))
 bjEvents = sorted(bjEvents, key=lambda event: datetime.fromisoformat(event['start']['dateTime'][:19]))
 
 numberOfEventsToShow = len(bjEvents)
