@@ -142,10 +142,15 @@ font_size = 20
 primary_font = ImageFont.truetype(SourceSerifProSemibold, font_size)
 screen_padding = 5
 listing_padding = 4
-day_row_width = max(primary_font.getlength('Thu 00'), primary_font.getlength('Today')) + screen_padding
+day_row_width = max(
+    primary_font.getlength('Thu 00'),
+    primary_font.getlength('Today'),
+) + screen_padding
 
 last_date = None
 space_on_screen = True
+local_tz = tz.gettz('Europe/London')
+today_local = datetime.now(local_tz).date()
 for index, event in enumerate(bjEvents):
     draw_height_for_this_event = screen_padding + index * (font_size + listing_padding)
     if (draw_height_for_this_event + font_size + screen_padding) > HEIGHT:
@@ -157,8 +162,23 @@ for index, event in enumerate(bjEvents):
     startTime = startTime[:19]
     dt = datetime.fromisoformat(startTime)
     dt = dt.replace(tzinfo=tz.gettz('UTC'))
-    dt = dt.astimezone(tz.gettz('Europe/London'))
-    if dt.date() == datetime.now().date():
+    dt = dt.astimezone(local_tz)
+    endTime = event['end']['dateTime'][:19]
+    end_dt = datetime.fromisoformat(endTime)
+    end_dt = end_dt.replace(tzinfo=tz.gettz('UTC'))
+    end_dt = end_dt.astimezone(local_tz)
+    start_date = dt.date()
+    end_date = end_dt.date()
+    if is_all_day:
+        end_date = end_date - timedelta(days=1)
+    is_multi_day_today = start_date < today_local <= end_date
+
+    if is_multi_day_today:
+        day_index = (today_local - start_date).days + 1
+        total_days = max((end_date - start_date).days + 1, 1)
+        subject = f'{day_index}/{total_days} {subject}'
+
+    if dt.date() == today_local or is_multi_day_today:
         day_fill = YELLOW
         day_of_the_week = 'Today'
         left, top, right, bottom = primary_font.getbbox(day_of_the_week)
