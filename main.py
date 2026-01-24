@@ -171,12 +171,17 @@ for index, event in enumerate(bjEvents):
     end_date = end_dt.date()
     if is_all_day:
         end_date = end_date - timedelta(days=1)
-    is_multi_day_today = start_date < today_local <= end_date
+    is_multi_day = end_date > start_date
+    is_multi_day_today = start_date <= today_local <= end_date and is_multi_day
+    is_future_multi_day = start_date > today_local and is_multi_day
 
     if is_multi_day_today:
         day_index = (today_local - start_date).days + 1
         total_days = max((end_date - start_date).days + 1, 1)
         subject = f'{day_index}/{total_days} {subject}'
+    elif is_future_multi_day:
+        total_days = max((end_date - start_date).days + 1, 1)
+        subject = f'{total_days}d {subject}'
 
     if dt.date() == today_local or is_multi_day_today:
         day_fill = YELLOW
